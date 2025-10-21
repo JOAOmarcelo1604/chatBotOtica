@@ -1,127 +1,102 @@
-🤖 Bot de Atendimento WhatsApp para Ótica Visual
-Este é um projeto de um assistente virtual (chatbot) para WhatsApp, desenvolvido para automatizar o primeiro atendimento da Ótica Visual. O bot é capaz de responder a saudações, apresentar um menu de opções, filtrar solicitações de clientes e transferir para o atendimento humano quando necessário.
+# 🤖 Bot WhatsApp para Ótica Visual
 
-O projeto foi construído com Java e Spring Boot, e utiliza a Evolution API para a conexão com o WhatsApp.
+Este projeto é um assistente virtual (chatbot) para o WhatsApp, desenvolvido para a **Ótica Visual**. O objetivo é automatizar o primeiro nível de atendimento ao cliente, respondendo a perguntas frequentes e coletando informações para agendamentos, 24 horas por dia.
 
-✨ Funcionalidades Principais
-Menu de Navegação: Apresenta um menu de opções por números para guiar o cliente.
+O projeto é construído em **Java** com o framework **Spring Boot** e se conecta ao WhatsApp através da **Evolution API** (enquanto aguarda a aprovação da API oficial via Twilio/Meta).
 
-Verificação de Horário: Detecta automaticamente se a mensagem foi recebida fora do horário comercial e envia uma mensagem de ausência.
+## ✨ Funcionalidades Atuais
 
-Gerenciamento de Estado: O bot "lembra" o que perguntou ao cliente (ex: aguardando um nome ou CPF) para dar continuidade ao fluxo de conversa.
+* **Saudação e Menu Dinâmico:** Responde a saudações ("olá", "oi", "bom dia", etc.) com um menu principal numerado.
+* **Verificação de Horário de Atendimento:** O bot verifica automaticamente o horário comercial (Seg-Sex: 8h-18h, Sáb: 8h-13h) e envia uma mensagem de "ausência" se o cliente chamar fora desse horário.
+* **Serviços Automatizados:**
+    * **1. Agendar exame:** Coleta o nome completo do cliente.
+    * **2. Consultar exame/pedido:** Coleta o CPF do cliente.
+    * **3. Preços:** Fornece informações iniciais e direciona para um atendente.
+    * **4. Horário de funcionamento:** Informa os horários da loja.
+    * **5. Formas de pagamento:** Informa as formas de pagamento aceitas.
+* **Gerenciamento de Estado:** O bot "lembra" o que perguntou. Se ele pede um nome (opção 1), ele sabe que a próxima mensagem será o nome, permitindo um fluxo de conversa coeso.
+* **Transferência para Atendimento Humano (Handoff):**
+    * Quando um cliente escolhe a opção "6. Falar com um atendente" (ou conclui a coleta de dados), o bot entra em modo silencioso (`HUMAN_CHAT_ACTIVE`).
+    * Isso permite que um atendente humano assuma a conversa sem a interferência do bot.
+* **Reativação Automática (Timeout):**
+    * Se um chat transferido para um humano ficar inativo por um período configurável (atualmente em 3 minutos para testes), o bot envia uma mensagem de encerramento por inatividade e "pega" o cliente de volta, deixando-o pronto para um novo atendimento automático.
 
-Handoff para Atendimento Humano: Em fluxos específicos (agendamento, consulta) ou por solicitação direta (opção "Falar com atendente"), o bot entra em modo "silencioso" para que um operador humano possa assumir a conversa.
+## 🛠️ Tecnologias Utilizadas
 
-Time-out de Conversa: Reativa automaticamente o bot para um cliente se a conversa com o atendente humano ficar inativa por um período configurado (ex: 3 horas), evitando que clientes fiquem "presos" no atendimento humano.
+* **Backend:** Java 17+
+* **Framework:** Spring Boot 3+
+    * `Spring Web`: Para criar a API REST que recebe os webhooks.
+    * `Spring Scheduling`: Para a tarefa agendada de limpeza de chats inativos.
+* **Conexão WhatsApp:** [Evolution API](https://github.com/EvolutionAPI/evolution-api) (atualmente)
+* **Ferramentas de Desenvolvimento:**
+    * `Maven`: Gerenciador de dependências.
+    * `ngrok`: Para expor a aplicação local (na porta `8081`) para a internet e receber os webhooks.
 
-Fluxos de Conversa Implementados:
+## 🚀 Como Executar o Projeto
 
-Agendamento de exame de vista (coleta o nome).
+Para rodar este projeto, você precisa de 3 componentes rodando simultaneamente: A **Evolution API**, esta **Aplicação Spring Boot** e o **ngrok**.
 
-Consulta de exame ou status de pedido (coleta o CPF).
+### Pré-requisitos
 
-Informações sobre preços.
+* JDK 17 ou superior.
+* Maven 3.x.
+* Conta no [ngrok](https://ngrok.com/).
+* Uma instância da [Evolution API](https://github.com/EvolutionAPI/evolution-api) instalada e rodando (ex: via Docker) com um número de WhatsApp de teste conectado.
 
-Informações sobre horário de funcionamento.
+### 1. Configurar e Rodar a Evolution API
 
-Informações sobre formas de pagamento.
+1.  Certifique-se que sua instância da Evolution API está rodando na porta `8080`.
+2.  No arquivo `.env` da Evolution API, certifique-se de que o webhook global está ativado:
+    ```env
+    WEBHOOK_GLOBAL_ENABLED=true
+    WEBHOOK_EVENTS_MESSAGES_UPSERT=true
+    ```
+3.  Deixe o `WEBHOOK_GLOBAL_URL` em branco por enquanto.
 
-🚀 Tecnologias Utilizadas
-Java 17+ (ou a versão que você estiver usando)
+### 2. Configurar e Rodar a Aplicação Spring Boot (Este Projeto)
 
-Spring Boot (para o servidor web e serviços)
+1.  Clone este repositório:
+    ```bash
+    git clone [URL-DO-SEU-REPOSITÓRIO]
+    ```
+2.  Abra o projeto em sua IDE (IntelliJ, VSCode, etc).
+3.  Edite o arquivo `src/main/resources/application.properties`:
+    ```properties
+    # Define a porta da aplicação Spring, para não conflitar com a Evolution API
+    server.port=8081
 
-Spring Web (para criar os endpoints REST do webhook)
+    # Configurações da Evolution API
+    evolution.api.url=http://localhost:8080
+    evolution.api.key=[SUA-API-KEY-GLOBAL-DA-EVOLUTION]
+    evolution.instance.name=[NOME-DA-SUA-INSTANCIA-EVOLUTION]
+    ```
+4.  Rode a aplicação Spring Boot pela sua IDE ou pelo terminal:
+    ```bash
+    mvn spring-boot:run
+    ```
 
-Spring Scheduler (para a tarefa de limpeza de conversas inativas)
+### 3. Configurar o Túnel com ngrok
 
-Maven (para gerenciamento de dependências)
+1.  Em um **novo terminal**, inicie o `ngrok` para expor a porta `8081` (onde o Spring está rodando):
+    ```bash
+    ngrok http 8081
+    ```
+2.  O `ngrok` vai gerar uma URL pública (ex: `https://seu-id-aleatorio.ngrok-free.app`). **Copie essa URL.**
 
-Evolution API (como conector não-oficial para o WhatsApp)
+### 4. Conectar Tudo
 
-Ngrok (para expor a aplicação local para a web durante o desenvolvimento)
+1.  Volte ao arquivo `.env` da **Evolution API**.
+2.  Cole a URL do `ngrok` no campo `WEBHOOK_GLOBAL_URL`, adicionando o caminho do nosso controller:
+    ```env
+    WEBHOOK_GLOBAL_URL='[https://seu-id-aleatorio.ngrok-free.app/api/whatsapp/webhook](https://seu-id-aleatorio.ngrok-free.app/api/whatsapp/webhook)'
+    ```
+3.  **Reinicie sua instância da Evolution API** (ex: `docker-compose down && docker-compose up -d`) para que ela leia a nova URL do webhook.
 
-⚙️ Como Executar o Projeto
-Siga estes passos para configurar e rodar o projeto localmente.
+Pronto! Agora você pode enviar uma mensagem "Olá" para o seu número de teste e o fluxo será iniciado.
 
-Pré-requisitos
-Java (JDK) 17 ou superior instalado.
+## 🗺️ Planos Futuros (Roadmap)
 
-Maven instalado.
-
-Uma instância da Evolution API deve estar instalada e rodando (ex: via Docker).
-
-O ngrok (ou uma ferramenta similar) para expor sua porta local.
-
-1. Clonar o Repositório
-Bash
-git clone https://github.com/seu-usuario/seu-repositorio.git
-cd seu-repositorio
-2. Configurar a Aplicação (Spring Boot)
-Abra o arquivo src/main/resources/application.properties.
-
-Adicione ou verifique as seguintes propriedades:
-
-Properties
-# Define a porta da aplicação (ex: 8081, para não conflitar com a Evolution)
-server.port=8081
-
-# Configurações da Evolution API
-# Verifique se a URL e porta da sua instância estão corretas
-evolution.api.url=http://localhost:8080
-evolution.api.key=SUA_API_KEY_AQUI
-evolution.instance.name=NOME_DA_SUA_INSTANCIA
-3. Configurar o Webhook (Evolution API)
-Inicie sua aplicação Spring Boot: mvn spring-boot:run (ou pela sua IDE).
-
-Em um novo terminal, exponha sua porta local com o ngrok:
-
-Bash
-ngrok http 8081
-O ngrok gerará uma URL pública (ex: https://xxxx-xxxx.ngrok-free.app).
-
-Abra o arquivo .env da sua Evolution API.
-
-Configure o webhook global para apontar para o seu endpoint do Spring Boot:
-
-Snippet de código
-# Ativa o webhook global
-WEBHOOK_GLOBAL_ENABLED=true
-
-# Define a URL do seu bot
-WEBHOOK_GLOBAL_URL='https://xxxx-xxxx.ngrok-free.app/api/whatsapp/webhook'
-
-# Garanta que o evento de nova mensagem está ativado
-WEBHOOK_EVENTS_MESSAGES_UPSERT=true
-Reinicie sua instância da Evolution API (ex: docker-compose down && docker-compose up -d) para que ela leia as novas configurações do .env.
-
-4. Testar
-Com a Aplicação Spring e a Evolution API rodando, envie uma mensagem "Olá" para o número de WhatsApp conectado à Evolution API. O bot deverá responder com o menu principal!
-
-🗺️ Estrutura do Projeto
-br.com.chat.empresa.oticavisual.controller.WebhookController
-
-Contém o endpoint principal /api/whatsapp/webhook.
-
-Recebe todas as notificações de eventos da Evolution API.
-
-Gerencia o estado da conversa (conversationState).
-
-Contém a lógica de verificação de horário (isForaDoHorario).
-
-Possui a tarefa agendada (cleanupInactiveConversations) para o time-out.
-
-br.com.chat.empresa.oticavisual.service.EvolutionService
-
-Classe responsável por formatar e enviar mensagens (respostas) para a Evolution API.
-
-br.com.chat.empresa.oticavisual.dto.EvolutionWebhook
-
-Classe DTO (Data Transfer Object) que mapeia o JSON de entrada do webhook, permitindo o acesso fácil a from (cliente) e body (mensagem).
-
-🔮 Próximos Passos (Roadmap)
-[ ] Migração para API Oficial: Substituir a EvolutionService por um TwilioService para migrar para a API oficial do WhatsApp (via Twilio) assim que a verificação da empresa na Meta for concluída.
-
-[ ] Interface de Atendimento Humano: Desenvolver ou integrar uma plataforma de chat (como Chatwoot) para que os atendentes humanos possam assumir as conversas do estado HUMAN_CHAT_ACTIVE.
-
-[ ] Persistência de Dados: Mudar o gerenciamento de estado (conversationState) de um Map em memória para um banco de dados (ex: H2, PostgreSQL) para que o bot não perca o estado das conversas se for reiniciado.
+-   [ ] **Migração para API Oficial:** Substituir a Evolution API pela **API Oficial do WhatsApp via Twilio** (assim que a verificação da empresa na Meta for concluída).
+-   [ ] **Interface de Atendimento:** Integrar o bot com uma plataforma de atendimento humano open source, como o **[Chatwoot](https://github.com/chatwoot/chatwoot)**, para gerenciar de forma profissional as conversas transferidas.
+-   [ ] **Persistência de Dados:** Migrar o gerenciamento de estado (`conversationState`) de um `Map` em memória para um banco de dados (como H2 ou PostgreSQL) para que as conversas não sejam perdidas se a aplicação reiniciar.
+-   [ ] **Botões Interativos:** Após a migração para a API oficial, implementar botões de resposta rápida e listas, tornando a interação mais fácil para o usuário.
