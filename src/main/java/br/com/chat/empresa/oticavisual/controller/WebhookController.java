@@ -183,7 +183,7 @@ public class WebhookController {
             // 6. Falar com Atendente
         } else if (messageLower.equals("6")) {
             String response = "Ok! Em alguns minutos, um de nossos atendentes retornará sua mensagem aqui mesmo. Por favor, aguarde.";
-            evolutionService.sendTextMessage(from, response); // Esta linha estava faltando
+            evolutionService.sendTextMessage(from, response);
             conversationState.put(from, new Conversation("HUMAN_CHAT_ACTIVE"));
         }
 
